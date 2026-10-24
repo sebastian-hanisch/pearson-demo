@@ -15,7 +15,9 @@ def grid():
 
 def test_probe_cell_still_matches_the_generator(grid):
     """Ändert sich Erzeuger, Statistik oder Seed-Ableitung, passt die gespeicherte Probezelle nicht mehr: dann tools/make_grid.py neu laufen lassen."""
-    assert ev.grid_probe() == grid["probe"]
+    probe = ev.grid_probe()
+    assert probe["runs"] == grid["probe"]["runs"] and all(probe[k] == grid["probe"][k] for k in ("true_r", "f", "p", "b"))      # Trefferzahlen exakt
+    assert probe == pytest.approx(grid["probe"], rel=1e-9)                                                                      # Breiten: Summationsreihenfolge weicht je Plattform in der 16. Stelle ab (CI-Linux, DEMO-PLAYBOOK §4)
 
 
 def test_grid_has_every_cell_exactly_once(grid):
