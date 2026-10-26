@@ -79,7 +79,7 @@ st.markdown(
     """
 **Erstes Stück der Korrelations-Reihe** (Wurzel): Ein Disponent legt zwei Kennzahlen je Standort-Woche nebeneinander, das **Auftragsvolumen** gegen den Plan und die **Überstunden**, und
 liest daraus **eine** Zahl, die **Pearson-Korrelation r**. Die Daten sind simuliert, die **wahre Korrelation ist bekannt**; so lässt sich messen, was die Zahl wert ist. Drei Dinge stehen im Mittelpunkt:
-**dasselbe r kann ganz verschiedene Bilder tragen**, das übliche **95 %-Intervall trifft bei schweren Rändern nicht** (und wird mit mehr Daten schlechter), und **„unkorreliert“ heißt nicht „unabhängig“**.
+**dasselbe r kann ganz verschiedene Bilder tragen**, das übliche **95 %-Intervall trifft bei schweren Rändern nicht** (und wird bei t(3), t(5) und Lognormal mit mehr Daten schlechter), und **„unkorreliert“ heißt nicht „unabhängig“**.
 
 Weiter unten: sechs Experimente (**🔬**), **🚧 Wo die Annahmen enden** und der Expander **📐 Mathematische Formulierung**. Ursachen und Störgrößen gehören nicht hierher
 (Linie *Kausale Diagramme und Adjustierung*), Rangmaße kommen im nächsten Stück.
@@ -96,7 +96,7 @@ with st.expander("So funktioniert die Pearson-Korrelation", expanded=True):
 
 | Verfahren | Idee | Setzt voraus |
 |---|---|---|
-| **Fisher-z** | atanh(r) ist ungefähr normalverteilt mit Standardabweichung 1/√(n − 3); Intervall bilden, zurücktransformieren | normalverteilte Paare (genauer: Kurtosis wie die Normalverteilung) |
+| **Fisher-z** | atanh(r) ist ungefähr normalverteilt mit Standardabweichung 1/√(n − 3); Intervall bilden, zurücktransformieren | normalverteilte Paare (genauer: bei elliptischen Verteilungen muss die Kurtosis der Normalverteilung entsprechen) |
 | **Perzentil-Bootstrap** | Paare mit Zurücklegen neu ziehen, r jedes Mal neu rechnen, die mittleren 95 % der Werte nehmen | unabhängige Beobachtungspaare; bei sehr kleinem n zu eng |
 | **BCa-Bootstrap** | wie Perzentil, aber die Quantile werden um eine Verzerrung z₀ und eine Beschleunigung a verschoben (aus Bootstrap- und Leave-one-out-Werten) | wie Perzentil |
         """
@@ -234,7 +234,7 @@ if grid is not None and grid.get("law"):
         t3.append(f"| {nu} | {r['predicted']:.3f} | {r['measured']:.3f} (± {r['measured_sd']:.3f}) | {100 * r['cov_predicted']:.1f} % | {100 * r['cov_measured']:.1f} % |")
     st.markdown("\n".join(t3))
     st.plotly_chart(build_law(law_rows), width="stretch", key="law_chart")
-    st.caption(f"Vorgerechnet: n = {law_rows[0]['n']}, {law_rows[0]['runs']} Läufe je Zeile (Streuung des Faktors über die vier Seeds in Klammern). ν = 3 hat unendliche Varianz, dort geht die Abdeckung mit n gegen 0 (Experiment 2). "
+    st.caption(f"Vorgerechnet: n = {law_rows[0]['n']}, {law_rows[0]['runs']} Läufe je Zeile (Streuung des Faktors über die vier Seeds in Klammern). ν = 3 hat unendliche Kurtosis (der 4. Moment fehlt), die asymptotische Varianz von √n·r ist unendlich; die Abdeckung fällt in Experiment 2 bis n = 1 000 weiter (auf 50,5 %). "
                "Bei ν = 5 ist der 8. Moment unendlich: der Faktor schwankt von Seed zu Seed stark, das Verdikt zählt nur ν ≥ 6.")
     kind, text = ev.verdict_law(law_rows)
     getattr(st, kind)(text)
@@ -281,7 +281,7 @@ if grid is not None:
     srow = ev.grid_size_row(grid, sfam, sn)
     kind, text = ev.verdict_size(sfam, sn, srow["t"], srow["t_runs"])
     getattr(st, kind)(text)
-    st.caption(f"t-Test: {srow['t_runs']} Läufe (vier Seeds), Bootstrap und Permutation: {srow['bp_runs']} Läufe (Monte-Carlo-Fehler etwa ±1 Punkt). Bootstrap-Test: liegt 0 außerhalb des Perzentil-Intervalls?")
+    st.caption(f"t-Test: {srow['t_runs']} Läufe (vier Seeds), Bootstrap und Permutation: {srow['bp_runs']} Läufe (Monte-Carlo-Fehler nahe 5 % etwa ±1 Punkt, bei hohen Raten bis ±2 Punkte). Bootstrap-Test: liegt 0 außerhalb des Perzentil-Intervalls?")
 if st.button("🔁 Fehlalarm live nachrechnen (meine Verteilung, mein n)", key="btn_size"):
     with st.spinner("Rechne 2 000 Wiederholungen …"):
         st.session_state["size_live"] = (settings.family, settings.n, ev.size_runs(settings.family, max(settings.n, 5), 2000, settings.seed + 3))
@@ -302,7 +302,7 @@ st.markdown("\n".join(["| r | r² | Fehler der Regression (% der Streuung von y)
 kind, text = ev.verdict_utility(util)
 getattr(st, kind)(text)
 plan = _plan_power()
-st.markdown("**Wie viele Beobachtungen für 80 % Teststärke?** Planwert n = ((1,96 + 0,84)/atanh ρ)² + 3. Gemessene Teststärke (2 000 Läufe, zweiseitig 5 %):")
+st.markdown("**Wie viele Beobachtungen für 80 % Teststärke?** Planwert n = ((1,96 + 0,8416)/atanh ρ)² + 3, aufgerundet. Gemessene Teststärke (2 000 Läufe, zweiseitig 5 %):")
 st.markdown("\n".join(["| wahres ρ | Planwert n | Teststärke Normal | Teststärke t(5), gemeinsame Skala |", "|---|---|---|---|"]
                       + [f"| {rho_} | {pn['n']} | {100 * pn['power']:.1f} % | {100 * pt['power']:.1f} % |" for rho_, pn, pt in zip((0.1, 0.3, 0.5), plan[0::2], plan[1::2])]))
 st.caption("Die Teststärke bei t(5) ist nicht um die höhere Fehlalarmrate bereinigt: sie ist nur zusammen mit Experiment 5 lesbar.")
@@ -318,7 +318,7 @@ st.markdown(
 |---|---|---|
 | **Geradlinigkeit:** r misst nur die Geradlinigkeit | dasselbe r = 0,8 trägt Wolke, Kurve und einen einzelnen Punkt (Experiment 1); Parabel oder Kreis ergeben r ≈ 0 trotz Abhängigkeit | Rangmaße (nächstes Stück), nichtlineare Abhängigkeit (Stück 3) |
 | **Kein einzelner Punkt dominiert** | ein Punkt bei fünf Standardabweichungen macht bei n = 30 meist aus Unabhängigkeit einen „signifikanten“ Befund (Experiment 4) | Rangmaße (nächstes Stück) |
-| **Schwache Ränder:** Fisher-z setzt Kurtosis wie die Normalverteilung voraus | die Abdeckung fällt bei t(3) mit n von 0,85 auf rund 0,5 (Experiment 2 und 3) | Bootstrap hilft nur zum Teil; robuste Maße (Stück 2 und 3) |
+| **Schwache Ränder:** Fisher-z setzt bei elliptischen Verteilungen eine Kurtosis wie die Normalverteilung voraus | die Abdeckung fällt bei t(3) mit n von 0,85 auf rund 0,5 (Experiment 2 und 3) | Bootstrap hilft nur zum Teil; robuste Maße (Stück 2 und 3) |
 | **Unabhängige Beobachtungen:** jede Zeile ein unabhängiges Paar | Reihen in der Zeit verletzen das; dann sind r und der Test irreführend | Scheinkorrelation in Zeitreihen (Stück 4) |
 | **Die wahre Korrelation ist bekannt** | nur in der Simulation; bei echten Daten fehlt der Maßstab, die Abdeckung lässt sich nicht messen | – |
 | **Eine Zahl für viele Variablen** | bei vielen Variablen entstehen viele Paare, und Zufallstreffer häufen sich | Korrelationsmatrix (Stück 5) |
